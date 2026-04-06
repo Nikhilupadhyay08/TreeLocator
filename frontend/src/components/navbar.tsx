@@ -3,14 +3,18 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/contexts/auth";
 import Logo from "@/components/logo";
 
-const navItems = [
-  { href: "/", label: "Home" },
-  { href: "/map", label: "Live Map" },
-  { href: "/plant", label: "Plant Tree" },
-  { href: "/trees", label: "Browse Trees" },
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/report", label: "Report" },
-];
+const getNavItems = (userRole?: string) => {
+  const items = [
+    { href: "/", label: "Home" },
+    { href: "/map", label: "Live Map" },
+    { href: "/plant", label: "Plant Tree" },
+    { href: "/trees", label: "Browse Trees" },
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/report", label: "Report" },
+  ];
+  
+  return items;
+};
 
 const roleLabels: Record<string, string> = {
   citizen: "Citizen",
@@ -56,7 +60,7 @@ export default function Navbar() {
 
           {/* Desktop Nav links - Center */}
           <div className="hidden lg:flex items-center gap-0.5 overflow-x-auto mx-4 flex-1 justify-center">
-            {navItems.map((item) => (
+            {getNavItems(user?.role).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -175,7 +179,7 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div ref={mobileMenuRef} className="lg:hidden border-t border-sidebar-border bg-sidebar-accent/20">
             <div className="px-4 py-3 space-y-1">
-              {navItems.map((item) => (
+              {getNavItems(user?.role).map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}

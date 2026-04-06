@@ -4,6 +4,45 @@ A full-stack tree plantation and monitoring platform built for India's forest co
 
 ---
 
+## ⚡ Quick Start (5 Minutes)
+
+### 1️⃣ Prerequisites Check
+```bash
+node --version    # Should be ≥ 18.x
+pnpm --version    # Should be ≥ 10.x (npm install -g pnpm if missing)
+psql --version    # Should be ≥ 15.x (PostgreSQL must be running)
+```
+
+### 2️⃣ Install & Setup
+```bash
+# Install dependencies
+pnpm install
+
+# Create database and tables
+node setup-db.mjs
+
+# Push schema to database
+pnpm db:push-force
+```
+
+### 3️⃣ Run the Project
+```bash
+# Start both backend and frontend
+pnpm dev
+
+# Backend will be running on: http://localhost:5000
+# Frontend will be running on: http://localhost:5173
+```
+
+### 4️⃣ Access the Application
+Open your browser and go to: **http://localhost:5173**
+
+---
+
+> 📖 **For detailed setup instructions, see [Comprehensive Setup Guide](./README_SETUP.md)**
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -205,13 +244,62 @@ LOG_LEVEL=info
 
 ### 6. Start Development
 
+#### Option 1: Run Both Servers (Recommended)
 ```bash
-# Start both backend and frontend concurrently
 pnpm dev
+```
 
-# Or start them individually:
-pnpm dev:backend    # Backend on http://localhost:5000
-pnpm dev:frontend   # Frontend on http://localhost:5173
+This will start both the backend and frontend concurrently:
+- **Backend API:** http://localhost:5000
+- **Frontend App:** http://localhost:5173
+
+#### Option 2: Run Servers Separately
+
+**Terminal 1 - Backend:**
+```bash
+pnpm dev:backend
+```
+Expected output: `Server listening port: 5000`
+
+**Terminal 2 - Frontend:**
+```bash
+pnpm dev:frontend
+```
+Expected output: `VITE v7.3.1  ready in 433 ms ➜  Local: http://localhost:5173/`
+
+### 7. Verify Everything is Working
+
+✅ Navigate to **http://localhost:5173** in your browser  
+✅ You should see the Dot-Explorer home page  
+✅ Try navigating to `/trees` or `/admin`  
+✅ Backend API health check: `curl http://localhost:5000/health`
+
+---
+
+## 📚 Common Commands
+
+### Development
+```bash
+pnpm dev              # Start both backend and frontend
+pnpm dev:backend      # Start only backend (port 5000)
+pnpm dev:frontend     # Start only frontend (port 5173)
+pnpm build            # Build for production
+pnpm format           # Format code with Prettier
+pnpm lint             # Lint TypeScript files
+```
+
+### Database
+```bash
+pnpm db:push          # Push schema changes to database
+pnpm db:push-force    # Force push (recreates tables)
+pnpm db:generate      # Generate migrations from schema
+pnpm db:studio        # Open Drizzle Studio (visual DB editor)
+```
+
+### Scripts
+```bash
+pnpm scripts:hello    # Run hello script
+pnpm scripts:create-test-officer  # Create test officer
 ```
 
 ---
@@ -347,8 +435,58 @@ pnpm db:push-force
 
 ---
 
-## 📝 License
+## � Troubleshooting
+
+### `net::ERR_CONNECTION_REFUSED` on localhost:5173
+**Problem:** Frontend requests failing  
+**Solution:** Ensure frontend dev server is running with `pnpm dev:frontend`
+
+### Database Connection Error
+**Problem:** `Error: connect ECONNREFUSED 127.0.0.1:5432`  
+**Solution:** 
+1. Verify PostgreSQL is running
+2. Check `DATABASE_URL` in `backend/.env`
+3. Verify `tree_monitor` database exists
+4. Run `pnpm db:push-force`
+
+### Port Already in Use
+**Problem:** `EADDRINUSE: address already in use :::5000`  
+**Solution:**
+```bash
+# Kill process on port 5000 (Windows)
+netstat -ano | findstr :5000
+taskkill /PID <PID> /F
+```
+
+### PNPM Command Not Found
+**Problem:** `pnpm: command not found`  
+**Solution:**
+```bash
+npm install -g pnpm
+```
+
+### Module Not Found Errors
+**Problem:** `Cannot find module '@...'`  
+**Solution:**
+```bash
+rm -r node_modules pnpm-lock.yaml
+pnpm install
+pnpm build
+```
+
+---
+
+## 📖 Documentation
+
+- **[Comprehensive Setup Guide](./README_SETUP.md)** — Detailed installation, configuration, and usage
+- **[API Documentation](./backend/api-spec/openapi.yaml)** — Full OpenAPI specification
+- **[Database Schema](./backend/src/db/schema/)** — Database table definitions
+
+---
+
+## �📝 License
 
 MIT
-#   T r e e L o c a t o r  
+#   T r e e L o c a t o r 
+ 
  

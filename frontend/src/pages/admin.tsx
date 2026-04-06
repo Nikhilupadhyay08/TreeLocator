@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Trees, BarChart3, Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
+import { Users, Trees, BarChart3, FileText, Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
 import {
   useListUsers,
   useCreateUser,
@@ -21,8 +21,10 @@ import {
   useCreateTree,
   useUpdateTreeStatus,
   useDeleteTree,
-  useGetDashboardStats
+  useGetDashboardStats,
+  useListReports
 } from "@/api";
+import { ReportReportType, ReportStatus } from "@/api";
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -33,6 +35,8 @@ export default function AdminPanel() {
   const [selectedTree, setSelectedTree] = useState<any>(null);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isTreeDialogOpen, setIsTreeDialogOpen] = useState(false);
+  const [reportStatusFilter, setReportStatusFilter] = useState<"" | "pending" | "verified" | "rejected">("");
+  const [reportTypeFilter, setReportTypeFilter] = useState<"" | "plantation" | "cutting" | "illegal_cutting" | "survival_check">("");
 
   // Form states
   const [userForm, setUserForm] = useState({
@@ -63,6 +67,7 @@ export default function AdminPanel() {
   const { data: usersData, isLoading: usersLoading, refetch: refetchUsers } = useListUsers();
   const { data: treesData, isLoading: treesLoading, refetch: refetchTrees } = useListTrees();
   const { data: statsData, isLoading: statsLoading } = useGetDashboardStats();
+  const { data: reportsData, isLoading: reportsLoading } = useListReports();
 
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
@@ -372,7 +377,7 @@ export default function AdminPanel() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard
@@ -384,6 +389,10 @@ export default function AdminPanel() {
           <TabsTrigger value="trees" className="flex items-center gap-2">
             <Trees className="h-4 w-4" />
             Tree Management
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Reports
           </TabsTrigger>
         </TabsList>
 
@@ -933,6 +942,113 @@ export default function AdminPanel() {
                   )}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Reports Management</CardTitle>
+              <CardDescription>Manage and review submitted reports</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-3 flex-wrap items-center">
+                <div className="flex-1 min-w-[200px]">
+                  <Input
+                    placeholder="Search by reporter name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <Select value={reportTypeFilter} onValueChange={(v: any) => setReportTypeFilter(v)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Report Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="plantation">Plantation</SelectItem>
+                    <SelectItem value="cutting">Tree Cutting</SelectItem>
+                    <SelectItem value="illegal_cutting">Illegal Cutting</SelectItem>
+                    <SelectItem value="survival_check">Survival Check</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={reportStatusFilter} onValueChange={(v: any) => setReportStatusFilter(v)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="verified">Verified</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setReportTypeFilter("");
+                    setReportStatusFilter("");
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+
+              {reportsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reporter</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(reportsData?.reports || [])
+                      .filter(report => {
+                        const matchesSearch = report.reportedBy.toLowerCase().includes(searchTerm.toLowerCase());
+                        const matchesType = !reportTypeFilter || report.reportType === reportTypeFilter;
+                        const matchesStatus = !reportStatusFilter || report.status === reportStatusFilter;
+                        return matchesSearch && matchesType && matchesStatus;
+                      })
+                      .map((report) => (
+                        <TableRow key={report.id}>
+                          <TableCell className="font-medium">{report.reportedBy}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {report.reportType.replace("_", " ").toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {report.state}, {report.district}
+                          </TableCell>
+                          <TableCell className="text-sm max-w-xs truncate">
+                            {report.description}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={report.status === "verified" ? "bg-green-100 text-green-800 border-green-200" : report.status === "pending" ? "bg-yellow-100 text-yellow-800 border-yellow-200" : "bg-red-100 text-red-800 border-red-200"}
+                            >
+                              {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(report.createdAt).toLocaleDateString("en-IN")}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

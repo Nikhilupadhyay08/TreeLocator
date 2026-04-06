@@ -12,6 +12,7 @@ import Trees from "@/pages/trees";
 import TreeDetail from "@/pages/tree-detail";
 import Dashboard from "@/pages/dashboard";
 import Report from "@/pages/report";
+import Reports from "@/pages/reports";
 import SignUp from "@/pages/signup";
 import Login from "@/pages/login";
 import Profile from "@/pages/profile";
@@ -31,6 +32,7 @@ function Router() {
         <Route path="/tree/:id" component={TreeDetail} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/report" component={Report} />
+        <Route path="/reports" component={Reports} />
         <Route path="/admin" component={AdminPanel} />
         <Route path="/signup" component={SignUp} />
         <Route path="/login" component={Login} />
