@@ -7,3 +7,4 @@ export * from "./iot_sensors";
 export * from "./ai_analysis";
 export * from "./satellite_scans";
 export * from "./blockchain_logs";
+export * from "./smtp_config";

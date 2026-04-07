@@ -5,6 +5,7 @@ import reportsRouter from "./reports";
 import dashboardRouter from "./dashboard";
 import authRouter from "./auth";
 import adminRouter from "./admin";
+import smtpRouter from "./smtp";
 import iotRouter from "./iot";
 import aiRouter from "./ai";
 import satelliteRouter from "./satellite";
@@ -14,6 +15,7 @@ const router: IRouter = Router();
 
 router.use(authRouter);
 router.use(adminRouter);
+router.use(smtpRouter);
 router.use(healthRouter);
 router.use(treesRouter);
 router.use(reportsRouter);

@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Users, Trees, BarChart3, FileText, Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
+import { Users, Trees, BarChart3, FileText, Mail, Plus, Edit, Trash2, Search, Loader2 } from "lucide-react";
+import SmtpManagement from "@/components/smtp-management";
 import {
   useListUsers,
   useCreateUser,
@@ -377,7 +378,7 @@ export default function AdminPanel() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard
@@ -393,6 +394,10 @@ export default function AdminPanel() {
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Reports
+          </TabsTrigger>
+          <TabsTrigger value="smtp" className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            SMTP
           </TabsTrigger>
         </TabsList>
 
@@ -1051,6 +1056,10 @@ export default function AdminPanel() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="smtp" className="space-y-6">
+          <SmtpManagement />
         </TabsContent>
       </Tabs>
     </div>

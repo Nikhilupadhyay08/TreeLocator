@@ -3,6 +3,7 @@ import { db } from "../db";
 import { citizensTable, forestOfficersTable } from "../db";
 import { eq } from "drizzle-orm";
 import crypto from "crypto";
+import { emailService } from "../lib/email";
 
 const router = Router();
 
@@ -108,9 +109,15 @@ router.post("/auth/officer/signup", async (req, res) => {
     verificationOtp: otp,
   }).returning();
 
-  // In production this OTP would be emailed to the officer's government email.
-  // For this system, we return it to show on screen.
-  res.status(201).json({ officerId: officer.id, otp });
+  // Send OTP via email
+  await emailService.sendOTP(officer.email, otp, officer.name);
+
+  // Return response without exposing OTP in response (it will be sent via email)
+  res.status(201).json({ 
+    officerId: officer.id, 
+    message: "OTP has been sent to your email. Please check your inbox and provide it to verify your account.",
+    email: officer.email
+  });
 });
 
 // POST /api/auth/officer/verify

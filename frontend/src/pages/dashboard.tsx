@@ -1,5 +1,9 @@
-import { useGetDashboardStats, useGetStateStats, useGetYearStats } from "@/api";
+import { useEffect, useState } from 'react';
+import { useGetDashboardStats, useGetStateStats, useGetYearStats, useListTrees } from "@/api";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { TreeHealthMonitor } from "@/components/tree-health-monitor";
+import { useMultipleTreeIotData } from "@/hooks/use-tree-iot";
+import type { TreeHealthData } from "@/lib/tree-health";
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -15,14 +19,73 @@ export default function Dashboard() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: stateData, isLoading: stateLoading } = useGetStateStats();
   const { data: yearData } = useGetYearStats();
+  const { data: treesData } = useListTrees({});
+  
+  // Get IoT data for monitoring trees (limit to recent trees for performance)
+  const recentTreeCodes = (treesData?.trees ?? [])
+    .slice(0, 5) // Monitor first 5 trees
+    .map(t => t.treeCode);
+  
+  const { data: iotDataMap } = useMultipleTreeIotData(recentTreeCodes, 5000);
+
+  const [treesToMonitor, setTreesToMonitor] = useState<Array<{
+    treeCode: string;
+    healthData: TreeHealthData;
+    treeName?: string;
+  }>>([]);
+
+  // Process IoT data into health monitoring format
+  useEffect(() => {
+    const monitored = recentTreeCodes
+      .map(code => {
+        const readings = iotDataMap[code];
+        if (!readings || readings.length === 0) return null;
+        
+        const latest = readings[0]; // Most recent reading
+        return {
+          treeCode: code,
+          healthData: {
+            temperature: latest.temperature,
+            soilMoisture: latest.soilMoisture,
+            humidity: latest.humidity,
+            recordedAt: latest.recordedAt,
+          },
+          treeName: treesData?.trees?.find(t => t.treeCode === code)?.species,
+        };
+      })
+      .filter(Boolean) as typeof treesToMonitor;
+
+    setTreesToMonitor(monitored);
+  }, [iotDataMap, recentTreeCodes, treesData?.trees]);
 
   const years = yearData?.years ?? [];
   const states = stateData?.states ?? [];
+  const hasCriticalTrees = treesToMonitor.some(t => {
+    // Quick check for critical conditions
+    return t.healthData.temperature > 40 || t.healthData.soilMoisture < 20;
+  });
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-foreground mb-1">Dashboard Analytics</h1>
       <p className="text-muted-foreground text-sm mb-6">State-wise and year-wise tree plantation overview.</p>
+
+      {/* Health Alerts Section */}
+      {treesToMonitor.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+              🌳 Real-Time Tree Health Monitoring
+            </h2>
+            {hasCriticalTrees && (
+              <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">
+                Critical Alert
+              </span>
+            )}
+          </div>
+          <TreeHealthMonitor trees={treesToMonitor} pollInterval={5000} />
+        </div>
+      )}
 
       {/* Stats Cards */}
       {statsLoading ? (
