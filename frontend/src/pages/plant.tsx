@@ -48,6 +48,7 @@ export default function PlantTree() {
   const createTree = useCreateTree();
 
   const [generatedCode, setGeneratedCode] = useState<string>("");
+  const [savedOffline, setSavedOffline] = useState(false);
   const [form, setForm] = useState({
     state: "",
     stateCode: "",
@@ -131,7 +132,9 @@ export default function PlantTree() {
       },
       {
         onSuccess: (tree) => {
-          setGeneratedCode(tree.treeCode);
+          const queued = Boolean((tree as { offlineQueued?: boolean }).offlineQueued);
+          setSavedOffline(queued);
+          setGeneratedCode(queued ? (tree.treeCode || "Pending sync") : tree.treeCode);
           queryClient.invalidateQueries({ queryKey: getListTreesQueryKey() });
           queryClient.invalidateQueries({ queryKey: getGetDashboardStatsQueryKey() });
         },
@@ -147,13 +150,19 @@ export default function PlantTree() {
             <span className="text-3xl text-green-600">&#10003;</span>
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">Tree Registered Successfully</h2>
-          <p className="text-muted-foreground text-sm mb-6">Your tree has been assigned a unique identification code.</p>
+          <p className="text-muted-foreground text-sm mb-6">
+            {savedOffline
+              ? "Your tree was saved offline and will sync automatically when the connection returns."
+              : "Your tree has been assigned a unique identification code."}
+          </p>
           <div className="bg-green-50 border border-green-200 rounded-lg px-6 py-4 mb-6">
-            <div className="text-xs text-green-700 uppercase tracking-wider font-semibold mb-1">Unique Tree ID</div>
+            <div className="text-xs text-green-700 uppercase tracking-wider font-semibold mb-1">
+              {savedOffline ? "Offline Draft ID" : "Unique Tree ID"}
+            </div>
             <div className="text-2xl font-mono font-bold text-green-800 tracking-widest">{generatedCode}</div>
           </div>
           <div className="text-xs text-muted-foreground mb-6">
-            Format: STATE-DISTRICT-YEAR-SERIAL
+            {savedOffline ? "Will sync to the server once connectivity is restored." : "Format: STATE-DISTRICT-YEAR-SERIAL"}
           </div>
           <div className="flex gap-3 justify-center">
             <button
@@ -186,6 +195,7 @@ export default function PlantTree() {
             <select
               value={form.stateCode}
               onChange={handleStateChange}
+              aria-label="State"
               className="w-full border border-input rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Select State</option>
@@ -214,6 +224,7 @@ export default function PlantTree() {
           <select
             value={form.species}
             onChange={(e) => setForm((f) => ({ ...f, species: e.target.value }))}
+            aria-label="Species"
             className="w-full border border-input rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Select Species</option>

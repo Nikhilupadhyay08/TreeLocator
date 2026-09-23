@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, iotSensorsTable } from "../db";
 import { eq, desc } from "drizzle-orm";
+import { treeHealthNotificationService } from "../lib/tree-health-notifications";
 
 const router: IRouter = Router();
 
@@ -40,6 +41,12 @@ router.post("/api/iot/:treeCode", async (req, res, next) => {
         }).returning();
 
         res.json(newReading);
+
+        if (alertGenerated) {
+            void treeHealthNotificationService.notifyCriticalReading(newReading).catch((error) => {
+                console.error("Failed to send tree health alert notifications:", error);
+            });
+        }
     } catch (err) {
         next(err);
     }

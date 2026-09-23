@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { startTreeHealthNotificationScheduler } from "./lib/tree-health-notifications";
 
 const rawPort = process.env["PORT"] || "5000";
 
@@ -16,4 +17,5 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  startTreeHealthNotificationScheduler();
 });

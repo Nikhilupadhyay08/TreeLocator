@@ -1,59 +1,70 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 import { db } from "../db";
 import { smtpConfigTable } from "../db/schema/smtp_config";
 import { eq } from "drizzle-orm";
 
 class EmailService {
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: Transporter | null = null;
   private currentConfigId: number | null = null;
 
-  async initializeTransporter() {
+  private getFromAddress(config: typeof smtpConfigTable.$inferSelect): string {
+    return `${config.fromName || "Tree Tracking System"} <${config.fromEmail}>`;
+  }
+
+  private async resolveTransporter() {
     try {
       const [config] = await db.select().from(smtpConfigTable).where(eq(smtpConfigTable.isActive, true)).limit(1);
 
       if (!config) {
         console.warn("No active SMTP configuration found. Email sending disabled.");
+        this.transporter = null;
+        this.currentConfigId = null;
         return false;
       }
 
-      this.currentConfigId = config.id;
-      this.transporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: {
-          user: config.username,
-          pass: config.password,
-        },
-      });
+      if (!this.transporter || this.currentConfigId !== config.id) {
+        this.currentConfigId = config.id;
+        this.transporter = nodemailer.createTransport({
+          host: config.host,
+          port: config.port,
+          secure: config.secure,
+          auth: {
+            user: config.username,
+            pass: config.password,
+          },
+        });
+      }
 
-      return true;
+      return { transporter: this.transporter, config };
     } catch (error) {
       console.error("Failed to initialize email transporter:", error);
       return false;
     }
   }
 
-  async sendOTP(email: string, otp: string, recipientName: string = "User"): Promise<boolean> {
+  async sendEmail(mailOptions: SendMailOptions): Promise<boolean> {
     try {
-      // Initialize transporter if not already done
-      if (!this.transporter) {
-        const initialized = await this.initializeTransporter();
-        if (!initialized || !this.transporter) {
-          console.error("Email service not configured");
-          return false;
-        }
-      }
-
-      const [config] = await db.select().from(smtpConfigTable).where(eq(smtpConfigTable.id, this.currentConfigId!)).limit(1);
-
-      if (!config) {
-        console.error("SMTP configuration not found");
+      const resolved = await this.resolveTransporter();
+      if (!resolved || !resolved.transporter) {
+        console.error("Email service not configured");
         return false;
       }
 
-      const mailOptions = {
-        from: `${config.fromName || "Tree Tracking System"} <${config.fromEmail}>`,
+      const info = await resolved.transporter.sendMail({
+        ...mailOptions,
+        from: mailOptions.from || this.getFromAddress(resolved.config),
+      });
+
+      console.log("Email sent successfully:", info.messageId);
+      return true;
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      return false;
+    }
+  }
+
+  async sendOTP(email: string, otp: string, recipientName: string = "User"): Promise<boolean> {
+    return this.sendEmail({
         to: email,
         subject: "Your OTP for Tree Tracking System",
         html: `
@@ -75,36 +86,19 @@ class EmailService {
           </div>
         `,
         text: `Your OTP for Tree Tracking System is: ${otp}. This OTP is valid for 10 minutes.`,
-      };
-
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log("Email sent successfully:", info.messageId);
-      return true;
-    } catch (error) {
-      console.error("Failed to send OTP email:", error);
-      return false;
-    }
+    });
   }
 
   async sendTestEmail(testEmail: string): Promise<boolean> {
-    try {
-      if (!this.transporter) {
-        const initialized = await this.initializeTransporter();
-        if (!initialized || !this.transporter) {
-          console.error("Email service not configured");
-          return false;
-        }
-      }
+    const resolved = await this.resolveTransporter();
+    if (!resolved || !resolved.transporter) {
+      console.error("Email service not configured");
+      return false;
+    }
 
-      const [config] = await db.select().from(smtpConfigTable).where(eq(smtpConfigTable.id, this.currentConfigId!)).limit(1);
+    const { config } = resolved;
 
-      if (!config) {
-        console.error("SMTP configuration not found");
-        return false;
-      }
-
-      const mailOptions = {
-        from: `${config.fromName || "Tree Tracking System"} <${config.fromEmail}>`,
+    return this.sendEmail({
         to: testEmail,
         subject: "SMTP Configuration Test",
         html: `
@@ -125,27 +119,17 @@ class EmailService {
           </div>
         `,
         text: "SMTP Configuration is working successfully!",
-      };
-
-      const info = await this.transporter.sendMail(mailOptions);
-      console.log("Test email sent successfully:", info.messageId);
-      return true;
-    } catch (error) {
-      console.error("Failed to send test email:", error);
-      return false;
-    }
+    });
   }
 
   async verifyConnection(): Promise<boolean> {
     try {
-      if (!this.transporter) {
-        const initialized = await this.initializeTransporter();
-        if (!initialized || !this.transporter) {
+      const resolved = await this.resolveTransporter();
+      if (!resolved || !resolved.transporter) {
           return false;
-        }
       }
 
-      await this.transporter.verify();
+      await resolved.transporter.verify();
       console.log("SMTP connection verified successfully");
       return true;
     } catch (error) {

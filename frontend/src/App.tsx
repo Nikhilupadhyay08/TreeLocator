@@ -17,6 +17,7 @@ import SignUp from "@/pages/signup";
 import Login from "@/pages/login";
 import Profile from "@/pages/profile";
 import AdminPanel from "@/pages/admin";
+import OfflineBanner from "@/components/offline-banner";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,7 @@ function App() {
           </WouterRouter>
         </AuthProvider>
         <Toaster />
+        <OfflineBanner />
       </TooltipProvider>
     </QueryClientProvider>
   );

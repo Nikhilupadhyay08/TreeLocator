@@ -8,6 +8,8 @@ export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
+import { enqueueOfflineRequest, shouldQueueOfflineRequest } from "./offline-queue";
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
@@ -89,6 +91,10 @@ function mergeHeaders(...sources: Array<HeadersInit | undefined>): Headers {
   }
 
   return headers;
+}
+
+function headersToEntries(headers: Headers): Array<[string, string]> {
+  return Array.from(headers.entries());
 }
 
 function getMediaType(headers: Headers): string | null {
@@ -360,12 +366,39 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const requestInit = { ...init, method, headers };
 
-  if (!response.ok) {
-    const errorData = await parseErrorBody(response, method);
-    throw new ApiError(response, errorData, requestInfo);
+  try {
+    const response = await fetch(input, requestInit);
+
+    if (!response.ok) {
+      const errorData = await parseErrorBody(response, method);
+      throw new ApiError(response, errorData, requestInfo);
+    }
+
+    return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  } catch (error) {
+    if (shouldQueueOfflineRequest(requestInfo.url, method)) {
+      const queued = enqueueOfflineRequest({
+        url: requestInfo.url,
+        method,
+        headers: headersToEntries(headers),
+        body: typeof init.body === "string" ? init.body : null,
+        responseType,
+      });
+
+      if (queued) {
+        return {
+          offlineQueued: true,
+          offlineQueueId: queued.id,
+          queuedAt: queued.createdAt,
+          url: queued.url,
+          method: queued.method,
+          treeCode: requestInfo.url.includes("/api/trees") ? `OFFLINE-${queued.id.slice(0, 8).toUpperCase()}` : undefined,
+        } as T;
+      }
+    }
+
+    throw error;
   }
-
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { setBaseUrl } from '@/api';
+import { customFetch } from '@/api/custom-fetch';
 
 export interface IotSensor {
   id: number;
@@ -15,11 +15,7 @@ export interface IotSensor {
  * Fetch IoT sensor data for a specific tree
  */
 export async function fetchTreeIotData(treeCode: string): Promise<IotSensor[]> {
-  const response = await fetch(`/api/iot/${treeCode}`);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch IoT data for tree ${treeCode}`);
-  }
-  return response.json();
+  return customFetch<IotSensor[]>(`/api/iot/${treeCode}`);
 }
 
 /**
@@ -107,18 +103,12 @@ export async function submitIotReading(
     temperature: number;
     humidity: number;
   }
-): Promise<IotSensor> {
-  const response = await fetch(`/api/iot/${treeCode}`, {
+): Promise<IotSensor | { offlineQueued: true; offlineQueueId: string; queuedAt: string; url: string; method: string }> {
+  return customFetch<IotSensor | { offlineQueued: true; offlineQueueId: string; queuedAt: string; url: string; method: string }>(`/api/iot/${treeCode}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to submit IoT reading for tree ${treeCode}`);
-  }
-
-  return response.json();
 }

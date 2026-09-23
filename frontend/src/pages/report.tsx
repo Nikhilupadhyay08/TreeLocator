@@ -23,6 +23,7 @@ export default function Report() {
   const createReport = useCreateReport();
 
   const [submitted, setSubmitted] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
   const [form, setForm] = useState({
     reportType: "cutting",
     reportedBy: "",
@@ -85,7 +86,8 @@ export default function Report() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: (report) => {
+          setSavedOffline(Boolean((report as { offlineQueued?: boolean }).offlineQueued));
           queryClient.invalidateQueries({ queryKey: getListReportsQueryKey() });
           setSubmitted(true);
         },
@@ -101,7 +103,11 @@ export default function Report() {
             <span className="text-3xl text-green-600">&#10003;</span>
           </div>
           <h2 className="text-xl font-bold text-foreground mb-2">Report Submitted</h2>
-          <p className="text-muted-foreground text-sm mb-6">Your report has been submitted and is under review.</p>
+          <p className="text-muted-foreground text-sm mb-6">
+            {savedOffline
+              ? "Your report was saved offline and will sync automatically when the connection returns."
+              : "Your report has been submitted and is under review."}
+          </p>
           <button
             onClick={() => { setSubmitted(false); setForm({ reportType: "cutting", reportedBy: "", description: "", state: "", district: "", treeCode: "", photoUrl: "", latitude: "", longitude: "" }); }}
             className="px-4 py-2 bg-primary text-primary-foreground rounded text-sm font-medium hover:opacity-90 transition-opacity"
@@ -124,6 +130,7 @@ export default function Report() {
           <select
             value={form.reportType}
             onChange={(e) => setForm((f) => ({ ...f, reportType: e.target.value }))}
+            aria-label="Report type"
             className="w-full border border-input rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {REPORT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -160,6 +167,7 @@ export default function Report() {
             <select
               value={form.state}
               onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+              aria-label="State"
               className="w-full border border-input rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Select State</option>
